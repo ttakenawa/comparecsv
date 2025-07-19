@@ -3,25 +3,27 @@ import streamlit as st
 import pandas as pd
 import io, os, csv
 
-# ── タイトル＋リフレッシュボタン（ガード付き） ──
-st.title("📊 Prediction vs. Label Accuracy Checker")
-if st.button("↻ Refresh"):
-    # experimental_rerun が無ければ無視する
-    try:
-        st.experimental_rerun()
-    except AttributeError:
-        # 古い/一部環境ではこの機能が無いため安全に無視
-        pass
+# ── ファイルアップロードのセッションキー ──
+UPLOADER_KEY = "uploaded_file"
 
+# ── Refresh ボタンが押されたらアップローダーをクリア ──
+def clear_uploader():
+    st.session_state[UPLOADER_KEY] = None
+
+# ── タイトル＋Refreshボタン ──
+st.title("📊 Prediction vs. Label Accuracy Checker")
+st.button("↻ Refresh", on_click=clear_uploader)
+
+# ── ファイルアップローダー ──
 uploaded = st.file_uploader(
-    "🔥 Upload your prediction CSV",
+    "🔥 Upload your prediction CSV (1列目→Number, 2列目→Predict)",
     type="csv",
-    help="1列目が Number, 2列目が Predict として扱います（ヘッダー行の有無は自動判定）"
+    key=UPLOADER_KEY
 )
 
 if uploaded is not None:
-    # ── ヘッダー行の有無を判定して読み込む ──
-    raw_csv   = uploaded.getvalue().decode("utf-8")
+    # ── ヘッダー行の有無を判定して読み込み ──
+    raw_csv    = uploaded.getvalue().decode("utf-8")
     has_header = csv.Sniffer().has_header(raw_csv)
     df_pred    = pd.read_csv(io.StringIO(raw_csv), header=0 if has_header else None)
 
@@ -32,7 +34,7 @@ if uploaded is not None:
         st.stop()
     df_pred = df_pred.rename(columns={cols[0]:"Number", cols[1]:"Predict"})[["Number","Predict"]]
 
-    # ── ラベル読み込み ──
+    # ── 正解ラベル読み込み ──
     user_home      = os.path.expanduser("~")
     global_sec     = os.path.join(user_home, ".streamlit", "secrets.toml")
     local_sec_file = os.path.join(os.getcwd(), ".streamlit", "secrets.toml")
@@ -43,7 +45,7 @@ if uploaded is not None:
     elif os.path.exists("label.csv"):
         df_label = pd.read_csv("label.csv")
     else:
-        st.error("正解データが見つかりません。（secrets.toml / label.csv）")
+        st.error("正解データが見つかりません。（secrets.toml / label.csv をご確認ください）")
         st.stop()
 
     df_label = df_label.rename(columns={
@@ -51,14 +53,12 @@ if uploaded is not None:
         df_label.columns[1]:"Label"
     })[["Number","Label"]]
 
-    # ── マージ・ソート・インデックス設定 ──
+    # ── マージ＆ソート＆インデックス設定 ──
     df = pd.merge(df_pred, df_label, on="Number", how="inner")
     df = df.sort_values("Number").set_index("Number")
 
-    # ── 正解率表示 ──
+    # ── 結果表示 ──
     acc = (df["Predict"] == df["Label"]).mean()
     st.subheader(f"🔍 Accuracy: {acc:.2%}")
-
-    # ── 最初の10件テーブル ──
     st.subheader("📝 First 10 Comparisons")
     st.table(df[["Predict","Label"]].head(10))
