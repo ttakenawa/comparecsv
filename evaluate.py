@@ -3,16 +3,27 @@ import streamlit as st
 import pandas as pd
 import io, os, csv
 
-# ── タイトル＋Refreshボタン ──
-st.title("📊 Prediction vs. Label Accuracy Checker")
-if st.button("↻ Refresh"):
-    try:
-        st.experimental_rerun()
-    except AttributeError:
-        # 古いバージョンでは存在しないことがあるので無視
-        pass
+# ── X ボタンを「Refresh」に見せかける CSS ──
+st.markdown(
+    """
+    <style>
+    /* アップローダー横のクリアボタン（X）を非表示に */
+    button[aria-label="Clear uploader"] > svg { display: none; }
+    /* 代わりに「Refresh」という文字をボタン内に追加 */
+    button[aria-label="Clear uploader"]::after {
+      content: "Refresh";
+      font-weight: bold;
+      font-size: 0.9em;
+      color: inherit;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
 
-# ── ファイルアップローダー（key不要） ──
+st.title("📊 Prediction vs. Label Accuracy Checker")
+
+# ── ファイルアップローダー ──
 uploaded = st.file_uploader(
     "🔥 Upload your prediction CSV (1列目→Number, 2列目→Predict)",
     type="csv"
