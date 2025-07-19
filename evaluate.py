@@ -3,22 +3,19 @@ import streamlit as st
 import pandas as pd
 import io, os, csv
 
-# ── ファイルアップロードのセッションキー ──
-UPLOADER_KEY = "uploaded_file"
-
-# ── Refresh ボタンが押されたらアップローダーをクリア ──
-def clear_uploader():
-    st.session_state[UPLOADER_KEY] = None
-
 # ── タイトル＋Refreshボタン ──
 st.title("📊 Prediction vs. Label Accuracy Checker")
-st.button("↻ Refresh", on_click=clear_uploader)
+if st.button("↻ Refresh"):
+    try:
+        st.experimental_rerun()
+    except AttributeError:
+        # 古いバージョンでは存在しないことがあるので無視
+        pass
 
-# ── ファイルアップローダー ──
+# ── ファイルアップローダー（key不要） ──
 uploaded = st.file_uploader(
     "🔥 Upload your prediction CSV (1列目→Number, 2列目→Predict)",
-    type="csv",
-    key=UPLOADER_KEY
+    type="csv"
 )
 
 if uploaded is not None:
