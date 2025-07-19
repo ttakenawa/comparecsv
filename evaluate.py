@@ -3,46 +3,28 @@ import streamlit as st
 import pandas as pd
 import io, os, csv
 
-# ── X ボタンを「Refresh」に見せかける CSS ──
-st.markdown(
-    """
-    <style>
-    /* アップローダー横のクリアボタン（X）を非表示に */
-    button[aria-label="Clear uploader"] > svg { display: none; }
-    /* 代わりに「Refresh」という文字をボタン内に追加 */
-    button[aria-label="Clear uploader"]::after {
-      content: "Refresh";
-      font-weight: bold;
-      font-size: 0.9em;
-      color: inherit;
-    }
-    </style>
-    """,
-    unsafe_allow_html=True,
-)
-
 st.title("📊 Prediction vs. Label Accuracy Checker")
 
-# ── ファイルアップローダー ──
+# ユーザーのCSVアップロード（×ボタンでファイルをクリアできます）
 uploaded = st.file_uploader(
     "🔥 Upload your prediction CSV (1列目→Number, 2列目→Predict)",
     type="csv"
 )
 
 if uploaded is not None:
-    # ── ヘッダー行の有無を判定して読み込み ──
+    # ── ヘッダー行の有無を自動判定して読み込み ──
     raw_csv    = uploaded.getvalue().decode("utf-8")
     has_header = csv.Sniffer().has_header(raw_csv)
     df_pred    = pd.read_csv(io.StringIO(raw_csv), header=0 if has_header else None)
 
-    # ── 1列目→Number, 2列目→Predict ──
+    # ── 1列目→Number, 2列目→Predict にリネーム ──
     cols = df_pred.columns.tolist()
     if len(cols) < 2:
         st.error("CSV に少なくとも 2 列必要です。")
         st.stop()
-    df_pred = df_pred.rename(columns={cols[0]:"Number", cols[1]:"Predict"})[["Number","Predict"]]
+    df_pred = df_pred.rename(columns={cols[0]: "Number", cols[1]: "Predict"})[["Number","Predict"]]
 
-    # ── 正解ラベル読み込み ──
+    # ── 正解ラベル読み込み（secrets.toml または label.csv） ──
     user_home      = os.path.expanduser("~")
     global_sec     = os.path.join(user_home, ".streamlit", "secrets.toml")
     local_sec_file = os.path.join(os.getcwd(), ".streamlit", "secrets.toml")
@@ -56,12 +38,10 @@ if uploaded is not None:
         st.error("正解データが見つかりません。（secrets.toml / label.csv をご確認ください）")
         st.stop()
 
-    df_label = df_label.rename(columns={
-        df_label.columns[0]:"Number",
-        df_label.columns[1]:"Label"
-    })[["Number","Label"]]
+    df_label = df_label.rename(columns={df_label.columns[0]: "Number",
+                                        df_label.columns[1]: "Label"})[["Number","Label"]]
 
-    # ── マージ＆ソート＆インデックス設定 ──
+    # ── マージ・ソート・インデックス設定 ──
     df = pd.merge(df_pred, df_label, on="Number", how="inner")
     df = df.sort_values("Number").set_index("Number")
 
