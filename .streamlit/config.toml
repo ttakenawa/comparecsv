@@ -1,0 +1,4 @@
+[server]
+fileWatcherType = "none"
+# もしポーリング監視に切り替えたい場合はこちらをコメント解除
+# fileWatcherType = "poll"
